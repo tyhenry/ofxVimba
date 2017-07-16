@@ -1,39 +1,37 @@
-MyAddon (rename to your addon's name)
-=====================================
-
-*This is a template of a README file for your addon. Fill in the relevant sections, and it should already give users a pretty good overview over your awesome addon!*
-We chose the [Markdown format](http://daringfireball.net/projects/markdown/syntax) since it can present good formatting where available (e.g. on Github) while still staying human-readable with a plain text editor.
-Don't forget, before announcing your addon to the world, you should replace `README.md` with this file and remove `README_AUTHOR.md`.
+ofxVimba
+========
 
 Introduction
 ------------
-Describe what your addon is about
+ofxVimba wraps the Vimba API to allow easy communication between openFrameworks and Allied Vision cameras (GigE, USB3, etc.)  
+This addon is brand new, and in active development.  `Watch` or check back soon for examples, tests, updates.
 
 License
 -------
-State which license you offer your addon under. openFrameworks is distributed under the [MIT License](https://en.wikipedia.org/wiki/MIT_License), and you might consider using this for your repository. By default, `license.md` contains a copy of the MIT license to which you can add your name and the year.
+ofxVimba is distributed under the [MIT License](https://en.wikipedia.org/wiki/MIT_License).  
 
 Installation
 ------------
-Any steps necessary to install your addon. Optimally, this means just dropping the folder into the `openFrameworks/addons/` folder.
+Windows 7-10 / Visual Studio (2015+) only currently!  Might work with some library finagling on Linux.  OSX is unsupported by Vimba.  
+Install the [Allied Vision Vimba SDK](https://www.alliedvision.com/en/products/software.html)  
+Clone into `openFrameworks/addons/` folder.  Add ofxVimba.props file to your Visual Studio project.  
+Definitely some bugs on the build events (DLL copies)!  Will be fixing this shortly.  
 
 Dependencies
 ------------
-What other addons are needed to properly work with this one?
+Windows 7-10 / Visual Studio 2015+
+[Allied Vision Vimba SDK](https://www.alliedvision.com/en/products/software.html)  
 
 Compatibility
 ------------
-Which versions of OF does this addon work with?
+0.9.8 (earlier versions and 0.10+ untested, but should work...)
 
 Known issues
 ------------
-Any specific (and long-living) issues/limitations you want to mention? For bugs, etc. you should use the issue tracker of your addon's repository
+a lot!  I'm working on it!
 
 Version history
 ------------
-It make sense to include a version history here (newest releases first), describing new features and changes to the addon. Use [git tags](http://learn.github.com/p/tagging.html) to mark release points in your repo, too!
-
-### Version 0.1 (Date):
-Describe relevant changes etc.
+first commit!
 
 
