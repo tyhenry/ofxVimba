@@ -12,19 +12,15 @@
     </Link>
     <PostBuildEvent />
     <PreLinkEvent>
-      <Command>
-      </Command>
+      <Command>xcopy "$(VIMBA_HOME)VimbaCPP\Bin\Win$(PlatformArchitecture)\*.dll" "$(TargetDir)" /y &amp;&amp; xcopy "$(VIMBA_HOME)VimbaImageTransform\Bin\Win$(PlatformArchitecture)\*.dll" "$(TargetDir)" /y</Command>
     </PreLinkEvent>
     <PreLinkEvent>
+      <Message>Copy Vimba DLLs into bin</Message>
+    </PreLinkEvent>
+    <PostBuildEvent />
+    <PostBuildEvent>
       <Message>
       </Message>
-    </PreLinkEvent>
-    <PostBuildEvent>
-      <Command>%(Command) 
-xcopy "$(VIMBA_HOME)VimbaCPP\Bin\Win$(PlatformArchitecture)\*.dll" "$(TargetDir)" /y &amp;&amp; xcopy "$(VIMBA_HOME)VimbaImageTransform\Bin\Win$(PlatformArchitecture)\*.dll" "$(TargetDir)" /y</Command>
-    </PostBuildEvent>
-    <PostBuildEvent>
-      <Message>Copy Vimba DLLs into bin</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup />
