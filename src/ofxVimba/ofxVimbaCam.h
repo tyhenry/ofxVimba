@@ -57,6 +57,8 @@ public:
 	void draw(float x, float y, float w, float h)	{ m_frame.draw(x,y,w,h); }
 	void draw(float x, float y)						{ m_frame.draw(x,y); }
 
+	ofImage& getFrame()		{ return m_frame; }
+
 protected:
 
 	ofImage m_frame;
