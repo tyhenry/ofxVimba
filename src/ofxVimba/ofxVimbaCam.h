@@ -37,13 +37,14 @@ public:
 	vector<string> listDevices(bool log =true);
 
 	/// \brief	Begin streaming from a camera
-	/// \param[in]	deviceID	(Optional) Specific device ID as string, provided by listDevices()
+	/// \param[in]	deviceID	(Optional) Specify device ID as string, as provided by listDevices()
 	///							If left blank, will try to open first available device
 	bool open(string deviceID="");
 
 	/// \brief	Closes the camera connection, freeing up resources
 	void close();
 
+	/// \brief	Grabs new frame(s) from the async queue (FrameObserver), if any ready
 	/// \return	True if new frame(s)
 	bool update();
 	
@@ -97,7 +98,7 @@ protected:
 		VmbErrorType QueueFrame(const VmbAPI::FramePtr pFrame);
 
 	private:
-	  // the frame observer stores all FramePtrs
+		/// the frame observer stores FramePtrs before processing
 		std::queue<VmbAPI::FramePtr> m_Frames;
 		AVT::VmbAPI::Mutex m_FramesMutex;
 

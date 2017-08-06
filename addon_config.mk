@@ -19,7 +19,7 @@ meta:
 	ADDON_DESCRIPTION = Interface for Allied Vision cameras using Vimba API
 	ADDON_AUTHOR = @tyhenry
 	ADDON_TAGS = "hardware interface" "camera" "machine vision" "computer vision"
-#	ADDON_URL = http://github.com/yournamehere/ofxAddonTemplate
+	ADDON_URL = http://github.com/tyhenry/ofxVimba
 
 common:
 	# dependencies with other addons, a list of them separated by spaces 

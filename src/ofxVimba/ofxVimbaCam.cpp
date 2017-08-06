@@ -133,7 +133,7 @@ bool ofxVimbaCam::update()
 			}
 			else 
 			{ 
-				ofLogError("ofxVimbaCam") 
+				ofLogWarning("ofxVimbaCam") 
 					<< "Camera ID: " << m_attributes.deviceID << " received an incomplete frame! Probably due to lack of bandwidth.";
 			}
 
