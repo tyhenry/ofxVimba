@@ -4,7 +4,7 @@
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>..\..\..\addons\ofxVimba\src;..\..\..\addons\ofxVimba\src\ofxVimba;$(OF_ROOT)\addons\ofxVimba;$(VIMBA_HOME);$(VIMBA_HOME)VimbaCPP\Include;$(VIMBA_HOME)VimbaImageTransform\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\addons\ofxVimba\src;..\..\..\addons\ofxVimba\src\ofxVimba;$(VIMBA_HOME);$(VIMBA_HOME)VimbaCPP\Include;$(VIMBA_HOME)VimbaImageTransform\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(VIMBA_HOME)VimbaCPP\Lib\Win$(PlatformArchitecture);$(VIMBA_HOME)VimbaImageTransform\Lib\Win$(PlatformArchitecture);$(VIMBA_HOME)VimbaImageTransform\Bin\Win$(PlatformArchitecture);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
