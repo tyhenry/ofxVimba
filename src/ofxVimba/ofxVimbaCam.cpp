@@ -23,6 +23,8 @@ bool ofxVimbaCam::open(string deviceID)
 
 	if (m_System.openDevice(deviceID, m_pCamera))
 	{
+		m_attributes.deviceID = deviceID; // store ID
+
 		// setup some stuff before we register the frame observer
 
 		// Set the GeV packet size to the highest possible value
@@ -63,14 +65,7 @@ bool ofxVimbaCam::open(string deviceID)
 				if (success = CHECK_ERR_Q(GetFeatureIntValue(m_pCamera, "PixelFormat", pixelFmt)))
 				{
 					m_attributes.pixelFormat = (VmbPixelFormat_t)pixelFmt;
-
-					// Create a frame observer for the camera
-					m_pFrameObserver = new FrameObserver(m_pCamera);
-					success = CHECK_ERR_MSG( m_pCamera->StartContinuousImageAcquisition(3, IFrameObserverPtr(m_pFrameObserver)), "Unable to start camera!");
-					if (success) {
-						m_attributes.deviceID = deviceID; // store ID
-						return true;
-					}
+					return true;
 				}
 			}
 		}
@@ -79,7 +74,98 @@ bool ofxVimbaCam::open(string deviceID)
 	close();
 	m_attributes = ofxVimbaCamAttributes(); // reset
 	return false;
+}
 
+
+bool ofxVimbaCam::start()
+{
+	using namespace VmbAPI;
+	if (m_pCamera != nullptr)
+	{
+		// Create a frame observer for the camera
+		m_pFrameObserver = new FrameObserver(m_pCamera);
+		auto error = m_pCamera->StartContinuousImageAcquisition(3, IFrameObserverPtr(m_pFrameObserver));
+		if (error == VmbErrorSuccess) 
+		{
+			return true;
+		}
+		ofLogError(__FUNCTION__) << ErrorToString(error);
+	}
+	return false;
+}
+
+//bool ofxVimbaCam::save()
+//{
+//	string path = ofToDataPath(m_attributes.deviceID + "_settings.xml", true);
+//	auto err = m_pCamera->SaveCameraSettings(path);
+//	if (err == VmbErrorSuccess) {
+//		ofLogNotice(__FUNCTION__) << "Saved settings to " << path;
+//		return true;
+//	}
+//
+//	ofLogError(__FUNCTION__) << "Couldn't save settings " << ErrorToString(err);
+//	return false;
+//}
+//
+//
+//bool ofxVimbaCam::load()
+//{
+//	string path = ofToDataPath(m_attributes.deviceID + "_settings.xml", true);
+//	auto err = m_pCamera->LoadCameraSettings(path);
+//	if (err == VmbErrorSuccess) {
+//		ofLogNotice(__FUNCTION__) << "Loaded settings from " << path;
+//		return true;
+//	}
+//
+//	ofLogError(__FUNCTION__) << "Couldn't load settings " << ErrorToString(err);
+//	return false;
+//}
+
+
+bool ofxVimbaCam::stop()
+{
+	if (m_pCamera != nullptr)
+	{
+		auto error = m_pCamera->StopContinuousImageAcquisition();
+		if (error == VmbErrorSuccess) 
+		{
+			m_pFrameObserver = nullptr;
+			return true;
+		}
+		ofLogError(__FUNCTION__) << ErrorToString(error);
+	}
+	return false;
+}
+
+void ofxVimba::ofxVimbaCam::listFeatures()
+{
+	map<VmbFeatureDataType,string> types = {
+		{ VmbFeatureDataUnknown, "Unknown feature type" },
+		{ VmbFeatureDataInt, "64 bit integer feature" },
+		{ VmbFeatureDataFloat, "64 bit floating point feature" },
+		{ VmbFeatureDataEnum, "Enumeration feature" },
+		{ VmbFeatureDataString, "String feature" },
+		{ VmbFeatureDataBool, "Boolean feature" },
+		{ VmbFeatureDataCommand, "Command feature" },
+		{ VmbFeatureDataRaw, "Raw (direct register access) feature" },
+		{ VmbFeatureDataNone, "Feature with no data" },
+	};
+
+	AVT::VmbAPI::FeaturePtrVector features;
+	auto error = m_pCamera->GetFeatures(features);
+	if (error != VmbErrorSuccess) return;
+
+	std::string featureName;
+	std::string featureCategory;
+	VmbFeatureDataType featureType;
+	for (const auto& feature : features) {
+		error = feature->GetName(featureName);
+		if (error == VmbErrorSuccess) error = feature->GetCategory(featureCategory);
+		if (error == VmbErrorSuccess) error = feature->GetDataType(featureType);
+		if (error == VmbErrorSuccess) {
+			ofLogNotice(__FUNCTION__) << featureName << "\t\t" << featureCategory << "\t\t" << types[featureType];
+		}
+	}
 }
 
 void ofxVimba::ofxVimbaCam::close()
@@ -180,6 +266,5 @@ VmbErrorType ofxVimbaCam::SetFeatureIntValue( const VmbAPI::CameraPtr &camera, c
 	}
 	return result;
 }
-
 
 

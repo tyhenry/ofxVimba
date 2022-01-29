@@ -36,13 +36,23 @@ public:
 
 	vector<string> listDevices(bool log =true);
 
-	/// \brief	Begin streaming from a camera
+	/// \brief	Open a connection to a camera
 	/// \param[in]	deviceID	(Optional) Specify device ID as string, as provided by listDevices()
 	///							If left blank, will try to open first available device
 	bool open(string deviceID="");
 
+	/// \brief	StartContinuousImageAcquisition
+	bool start();
+
+	/// \brief	StopContinuousImageAcquisition
+	bool stop();
+
 	/// \brief	Closes the camera connection, freeing up resources
 	void close();
+
+	//bool save();
+
+	//bool load();
 
 	/// \brief	Grabs new frame(s) from the async queue (FrameObserver), if any ready
 	/// \return	True if new frame(s)
@@ -59,6 +69,53 @@ public:
 	void draw(float x, float y)						{ m_frame.draw(x,y); }
 
 	ofImage& getFrame()		{ return m_frame; }
+	
+	
+	void listFeatures();
+
+	template <typename T>
+	void setFeatureValue(const std::string& featureName, T value) {
+		if (SP_ISNULL(m_pCamera))
+		{
+			ofLogWarning(__FUNCTION__) << "Camera has not been initialized";
+			return;
+		}
+		VmbAPI::FeaturePtr      pFeature;
+		VmbErrorType    result;
+		result = SP_ACCESS(m_pCamera)->GetFeatureByName(featureName.c_str(), pFeature);
+		if (VmbErrorSuccess == result)
+		{
+			result = SP_ACCESS(pFeature)->SetValue(value);
+			if (VmbErrorSuccess != result)
+			{
+				ofLogWarning(__FUNCTION__) << featureName << ": " << ErrorToString(result);
+			}
+		}
+	}
+
+	template <typename T>
+	T getFeatureValue(const std::string& featureName) {
+		if (SP_ISNULL(m_pCamera))
+		{
+			ofLogWarning(__FUNCTION__) << "Camera has not been initialized";
+			return -1;
+		}
+		VmbAPI::FeaturePtr      pFeature;
+		VmbErrorType    result;
+		result = SP_ACCESS(m_pCamera)->GetFeatureByName(featureName.c_str(), pFeature);
+		if (VmbErrorSuccess == result)
+		{
+			T value;
+			result = SP_ACCESS(pFeature)->GetValue(value);
+			if (VmbErrorSuccess != result)
+			{
+				ofLogWarning(__FUNCTION__) << ErrorToString(result);
+				return -1;
+			}
+			return value;
+		}
+		return -1;
+	}
 
 protected:
 

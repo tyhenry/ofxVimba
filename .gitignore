@@ -33,10 +33,20 @@ examples/**/[Dd]ebug*/
 examples/**/[Rr]elease*/
 examples/**/gcc-debug/
 examples/**/gcc-release/
+example*/bin/data
+example*/bin/libs/
+example*/bin/*
+example*/.vs
+example*/addons
+example*/*.sln
+example*/*.vcxproj*
+example*/icon.rc
+
 tests/**/[Dd]ebug*/
 tests/**/[Rr]elease*/
 tests/**/gcc-debug/
 tests/**/gcc-release/
+
 *.mode*
 *.app/
 *.pyc
@@ -129,4 +139,5 @@ Desktop.ini
 
 .mailmap
 /apps*/
+
 
