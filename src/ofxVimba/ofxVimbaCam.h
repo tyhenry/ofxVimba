@@ -9,6 +9,10 @@
 using namespace AVT;
 using namespace ofxVimba::Core;
 
+typedef chrono::high_resolution_clock Clock;
+typedef chrono::time_point<Clock> TimePoint;
+typedef chrono::duration<float, milli> Duration;
+
 namespace ofxVimba {
 
 class ofxVimbaCam {
@@ -65,23 +69,54 @@ public:
 	int getCamHeight() const	{ return m_attributes.height; }
 	string getCamPixelFormatAsString() 	{ return PixelFormatToString(m_attributes.pixelFormat); }
 
-	void draw(float x, float y, float w, float h) const	{ if (m_frame.isAllocated()) m_frame.draw(x,y,w,h); }
+	void draw(float x, float y, float w, float h) const		{ if (m_frame.isAllocated()) m_frame.draw(x,y,w,h); }
 	void draw(float x, float y) const						{ if(m_frame.isAllocated()) m_frame.draw(x,y);  }
 
+	inline int getNumFramesReceived() const { return m_NumFramesReceived; }
+
 	ofImage& getFrame()		{ return m_frame; }
-	
-	
+	ofTexture& getTexture() { return m_frame.getTexture(); }
+	string getID() const;
+
 	void listFeatures();
 
-	template <typename T>
-	void setFeatureValue(const std::string& featureName, T value) {
+	bool runCommand(string featureName) {
 		if (SP_ISNULL(m_pCamera))
 		{
 			ofLogWarning(__FUNCTION__) << "Camera has not been initialized";
-			return;
+			return false;
 		}
-		VmbAPI::FeaturePtr      pFeature;
-		VmbErrorType    result;
+
+		VmbAPI::FeaturePtr pFeature;
+		VmbErrorType result;
+		result = SP_ACCESS(m_pCamera)->GetFeatureByName(featureName.c_str(), pFeature);
+		if (VmbErrorSuccess == result) {
+			result = SP_ACCESS(pFeature)->RunCommand();
+			if (VmbErrorSuccess != result)
+			{
+				ofLogWarning(__FUNCTION__) << featureName << ": " << ErrorToString(result);
+				return false;
+			}
+			return true;
+		}
+		else 
+		{
+			ofLogWarning(__FUNCTION__) << featureName << ": " << ErrorToString(result);
+			return false;
+		}
+		return false;
+	}
+
+
+	template <typename T>
+	bool setFeatureValue(const std::string& featureName, T value) {
+		if (SP_ISNULL(m_pCamera))
+		{
+			ofLogWarning(__FUNCTION__) << "Camera has not been initialized";
+			return false;
+		}
+		VmbAPI::FeaturePtr pFeature;
+		VmbErrorType result;
 		result = SP_ACCESS(m_pCamera)->GetFeatureByName(featureName.c_str(), pFeature);
 		if (VmbErrorSuccess == result)
 		{
@@ -89,19 +124,22 @@ public:
 			if (VmbErrorSuccess != result)
 			{
 				ofLogWarning(__FUNCTION__) << featureName << ": " << ErrorToString(result);
+				return false;
 			}
+			return true;
 		}
+		return false;
 	}
 
 	template <typename T>
-	T getFeatureValue(const std::string& featureName) {
+	T getFeatureValue(const std::string& featureName) const {
 		if (SP_ISNULL(m_pCamera))
 		{
 			ofLogWarning(__FUNCTION__) << "Camera has not been initialized";
 			return -1;
 		}
-		VmbAPI::FeaturePtr      pFeature;
-		VmbErrorType    result;
+		VmbAPI::FeaturePtr pFeature;
+		VmbErrorType result;
 		result = SP_ACCESS(m_pCamera)->GetFeatureByName(featureName.c_str(), pFeature);
 		if (VmbErrorSuccess == result)
 		{
@@ -117,8 +155,14 @@ public:
 		return -1;
 	}
 
-	int getNumFramesReceived() const {
-		return m_NumFramesReceived;
+	TimePoint lastFrame;
+	vector<float> times;
+
+	float getFPS() const {
+		if (times.size() == 0) return 0;
+		float avg = accumulate(times.begin(), times.end(), 0.0) / times.size();
+		if (avg == 0) return 0;
+		return 1000 / avg;
 	}
 
 protected:
@@ -128,12 +172,9 @@ protected:
 	VmbAPI::CameraPtr m_pCamera;
 	ofxVimbaCamAttributes m_attributes;
 
-	int m_NumFramesReceived = 0;
+	unsigned long m_NumFramesReceived = 0;
 
-	VmbErrorType ofxVimbaCam::GetFeatureIntValue( const VmbAPI::CameraPtr &camera, const std::string &featureName, VmbInt64_t & value );
-	VmbErrorType ofxVimbaCam::SetFeatureIntValue( const VmbAPI::CameraPtr &camera, const std::string &featureName, VmbInt64_t value );
 
-	
 	/// \class	Asynchronous listener for new frames from device
 	///	\brief	keeps new frames in queue for ofxVimbaCam to grab
 	class FrameObserver : public VmbAPI::IFrameObserver 

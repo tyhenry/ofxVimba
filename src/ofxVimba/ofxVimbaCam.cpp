@@ -85,6 +85,8 @@ bool ofxVimbaCam::start()
 		return false;
 	}
 
+	lastFrame = Clock::now();
+
 	// Create a frame observer for the camera
 	m_pFrameObserver = new FrameObserver(m_pCamera);
 	auto error = m_pCamera->StartContinuousImageAcquisition(3, IFrameObserverPtr(m_pFrameObserver));
@@ -140,7 +142,7 @@ bool ofxVimbaCam::stop()
 	return false;
 }
 
-void ofxVimba::ofxVimbaCam::listFeatures()
+void ofxVimbaCam::listFeatures()
 {
 	map<VmbFeatureDataType,string> types = {
 		{ VmbFeatureDataUnknown, "Unknown feature type" },
@@ -171,7 +173,7 @@ void ofxVimba::ofxVimbaCam::listFeatures()
 	}
 }
 
-void ofxVimba::ofxVimbaCam::close()
+void ofxVimbaCam::close()
 {
 	if (m_pCamera != nullptr)
 	{
@@ -181,9 +183,20 @@ void ofxVimba::ofxVimbaCam::close()
 	}
 }
 
+string ofxVimbaCam::getID() const {
+
+	std::string strCameraID = "";
+	VmbErrorType err = m_pCamera->GetID(strCameraID);
+	if (VmbErrorSuccess != err) {
+		ofLogWarning(__FUNCTION__) << ErrorToString(err);
+	}
+	return strCameraID;
+
+}
+
 bool ofxVimbaCam::update()
 {
-	m_bNewFrame = false; 
+	m_bNewFrame = false;
 	if (m_pFrameObserver == nullptr) {
 		ofLogWarning(__FUNCTION__) << "Frame Observer not constructed. You will not receive new frames. Perhaps you didn't call start()?";
 		return false;
@@ -201,28 +214,46 @@ bool ofxVimbaCam::update()
 				m_bNewFrame = true;
 
 				// copy to image here
-				
-				VmbUchar_t *pBuffer;
-				VmbErrorType err = pFrame->GetImage( pBuffer );
-				if( VmbErrorSuccess == err )
+
+				VmbUchar_t* pBuffer;
+				VmbErrorType err = pFrame->GetImage(pBuffer);
+				if (VmbErrorSuccess == err)
 				{
-					VmbUint32_t nSize, width, height; 
+					VmbUint32_t nSize, width, height;
 					VmbPixelFormatType pixelFmt;
 					bool good = true;
-					good = good && CHECK_ERR_Q( pFrame->GetImageSize( nSize ) );
-					good = good && CHECK_ERR_Q( pFrame->GetWidth( width ) );
-					good = good && CHECK_ERR_Q( pFrame->GetHeight( height ) );
-					good = good && CHECK_ERR_Q( pFrame->GetPixelFormat( pixelFmt ) ); 
+					good = good && CHECK_ERR_Q(pFrame->GetImageSize(nSize));
+					good = good && CHECK_ERR_Q(pFrame->GetWidth(width));
+					good = good && CHECK_ERR_Q(pFrame->GetHeight(height));
+					good = good && CHECK_ERR_Q(pFrame->GetPixelFormat(pixelFmt));
 
-					if(good)
+					if (good)
 					{
 						//ofLogNotice(__FUNCTION__)
 						//	<< "w x h, size in bytes - pxl fmt: "
 						//	<< width << " x " << height << ", " << nSize << " - "
 						//	<< PixelFormatToString(pixelFmt)
 						//	<< endl;
+
+						//ofLogNotice(__FUNCTION__) << PixelFormatToString(pixelFmt);
+
+						if (pixelFmt != VmbPixelFormatRgb8) {
+							ofLogNotice(__FUNCTION__) << "Transforming Data";
+							std::vector<VmbUchar_t> TransformedData;
+							TransformImage(pFrame, TransformedData, "RGB24");
+							pBuffer = &TransformedData[0];
+						}
+			
 						m_frame.setFromPixels(pBuffer, width, height, OF_IMAGE_COLOR);
 						m_NumFramesReceived++;
+
+						TimePoint now = Clock::now();
+						Duration diff = now - lastFrame;
+						if (diff.count() < 1000)
+							times.push_back(diff.count());
+						while (times.size() > 100)
+							times.erase(times.begin());
+						lastFrame = Clock::now();
 					}
 					else
 					{
@@ -230,9 +261,9 @@ bool ofxVimbaCam::update()
 					}
 				}
 			}
-			else 
-			{ 
-				ofLogWarning("ofxVimbaCam") 
+			else
+			{
+				ofLogWarning("ofxVimbaCam")
 					<< "Camera ID: " << m_attributes.deviceID << " received an incomplete frame! Probably due to lack of bandwidth.";
 			}
 
@@ -251,39 +282,5 @@ bool ofxVimbaCam::update()
 }
 
 
-/** read an integer feature from camera.
-*/
-VmbErrorType ofxVimbaCam::GetFeatureIntValue( const VmbAPI::CameraPtr &camera, const std::string &featureName, VmbInt64_t & value )
-{
-	if( SP_ISNULL( camera ) )
-	{
-		return VmbErrorBadParameter;
-	}
-	VmbAPI::FeaturePtr      pFeature;
-	VmbErrorType    result;
-	result = SP_ACCESS( camera )->GetFeatureByName( featureName.c_str(), pFeature );
-	if( VmbErrorSuccess == result )
-	{
-		result = SP_ACCESS( pFeature )->GetValue( value );
-	}
-	return result;
-}
-/** write an integer feature from camera.
-*/
-VmbErrorType ofxVimbaCam::SetFeatureIntValue( const VmbAPI::CameraPtr &camera, const std::string &featureName, VmbInt64_t value )
-{
-	if( SP_ISNULL( camera ) )
-	{
-		return VmbErrorBadParameter;
-	}
-	VmbAPI::FeaturePtr      pFeature;
-	VmbErrorType    result;
-	result = SP_ACCESS( camera )->GetFeatureByName( featureName.c_str(), pFeature );
-	if( VmbErrorSuccess == result )
-	{
-		result = SP_ACCESS( pFeature )->SetValue( value );
-	}
-	return result;
-}
 
 

@@ -55,9 +55,10 @@ void ofApp::draw(){
 		cam.draw(x, 10);
 
 		stringstream info;
-		info << cam.getNumFramesReceived() << " frames";
+		info << cam.getNumFramesReceived() << " frames | " << setprecision(3) << cam.getFPS() << "fps";
 		ofDrawBitmapString(info.str(), x, cam.getCamHeight() + 14);
-		x += cam.getCamWidth() + 10;
+
+		x += cam.getCamWidth();
 	}
 	ofPopMatrix();
 }

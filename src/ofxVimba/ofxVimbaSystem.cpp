@@ -23,17 +23,18 @@ vector<string> ofxVimba::Core::ofxVimbaSystem::listDevices(bool log)
 	// get device list from Vimba API
 	if (CHECK_ERR_MSG(m_vmbSystem.GetCameras(cams), "Unable to access Vimba device list!"))
 	{
-		if (log) ofLogNotice("ofxVimba") << "Available Cameras:\n------------";
-		for (auto& cam : cams) {
+		if (log) ofLogNotice(__FUNCTION__) << "Available Cameras:\n------------";
+		for (VmbAPI::CameraPtr& cam : cams) {
+
 			// grab the device ID as string
 			string id;
 			if (cam && CHECK_ERR(cam->GetID(id)))
 			{
-				if (log) cout << "ID: " << id << endl;
+				if (log) ofLogNotice(__FUNCTION__) << "ID: " << id;
 				devices.push_back(id);
 			}
 		}
-		if (log) cout << "------------" << endl;
+		if (log) ofLogNotice(__FUNCTION__) << "------------";
 	}
 	return devices;
 }
