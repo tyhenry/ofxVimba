@@ -22,7 +22,7 @@ void ofApp::draw(){
 	cam.draw(10, 20, cam.getCamWidth()*0.5, cam.getCamHeight()*0.5);
 
 	stringstream ss;
-	ss << ofGetFrameRate() << "fps";
+	ss << ofGetFrameRate() << "fps |  " << cam.getNumFramesReceived() << " frames received";
 	ofDrawBitmapString(ss.str(), 10, 20);
 }
 

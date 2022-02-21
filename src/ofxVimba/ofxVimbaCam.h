@@ -61,12 +61,12 @@ public:
 	/// \return True if new frame(s)
 	bool isFrameNew()	{ return m_bNewFrame; }
 
-	int getCamWidth()	{ return m_attributes.width; }
-	int getCamHeight()	{ return m_attributes.height; }
+	int getCamWidth() const	{ return m_attributes.width; }
+	int getCamHeight() const	{ return m_attributes.height; }
 	string getCamPixelFormatAsString() 	{ return PixelFormatToString(m_attributes.pixelFormat); }
 
-	void draw(float x, float y, float w, float h)	{ if (m_frame.isAllocated()) m_frame.draw(x,y,w,h); }
-	void draw(float x, float y)						{ if(m_frame.isAllocated()) m_frame.draw(x,y);  }
+	void draw(float x, float y, float w, float h) const	{ if (m_frame.isAllocated()) m_frame.draw(x,y,w,h); }
+	void draw(float x, float y) const						{ if(m_frame.isAllocated()) m_frame.draw(x,y);  }
 
 	ofImage& getFrame()		{ return m_frame; }
 	
@@ -117,12 +117,18 @@ public:
 		return -1;
 	}
 
+	int getNumFramesReceived() const {
+		return m_NumFramesReceived;
+	}
+
 protected:
 
 	ofImage m_frame;
 	bool m_bNewFrame; // new frame flagged during update()
 	VmbAPI::CameraPtr m_pCamera;
 	ofxVimbaCamAttributes m_attributes;
+
+	int m_NumFramesReceived = 0;
 
 	VmbErrorType ofxVimbaCam::GetFeatureIntValue( const VmbAPI::CameraPtr &camera, const std::string &featureName, VmbInt64_t & value );
 	VmbErrorType ofxVimbaCam::SetFeatureIntValue( const VmbAPI::CameraPtr &camera, const std::string &featureName, VmbInt64_t value );

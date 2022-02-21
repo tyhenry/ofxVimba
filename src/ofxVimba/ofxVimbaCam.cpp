@@ -80,17 +80,20 @@ bool ofxVimbaCam::open(string deviceID)
 bool ofxVimbaCam::start()
 {
 	using namespace VmbAPI;
-	if (m_pCamera != nullptr)
-	{
-		// Create a frame observer for the camera
-		m_pFrameObserver = new FrameObserver(m_pCamera);
-		auto error = m_pCamera->StartContinuousImageAcquisition(3, IFrameObserverPtr(m_pFrameObserver));
-		if (error == VmbErrorSuccess) 
-		{
-			return true;
-		}
-		ofLogError(__FUNCTION__) << ErrorToString(error);
+	if (m_pCamera == nullptr) {
+		ofLogError(__FUNCTION__) << "camera no yet constructed.";
+		return false;
 	}
+
+	// Create a frame observer for the camera
+	m_pFrameObserver = new FrameObserver(m_pCamera);
+	auto error = m_pCamera->StartContinuousImageAcquisition(3, IFrameObserverPtr(m_pFrameObserver));
+	if (error == VmbErrorSuccess) 
+	{
+		return true;
+	}
+	ofLogError(__FUNCTION__) << ErrorToString(error);
+
 	return false;
 }
 
@@ -180,8 +183,13 @@ void ofxVimba::ofxVimbaCam::close()
 
 bool ofxVimbaCam::update()
 {
-	m_bNewFrame = false;
-	if (m_pFrameObserver != nullptr && m_pFrameObserver->HasNewFrame())
+	m_bNewFrame = false; 
+	if (m_pFrameObserver == nullptr) {
+		ofLogWarning(__FUNCTION__) << "Frame Observer not constructed. You will not receive new frames. Perhaps you didn't call start()?";
+		return false;
+	}
+
+	if (m_pFrameObserver->HasNewFrame())
 	{
 		VmbAPI::FramePtr pFrame = m_pFrameObserver->GetFrame();
 		if (pFrame != nullptr) {
@@ -214,6 +222,11 @@ bool ofxVimbaCam::update()
 						//	<< PixelFormatToString(pixelFmt)
 						//	<< endl;
 						m_frame.setFromPixels(pBuffer, width, height, OF_IMAGE_COLOR);
+						m_NumFramesReceived++;
+					}
+					else
+					{
+						ofLogWarning(__FUNCTION__) << "bad frame received";
 					}
 				}
 			}

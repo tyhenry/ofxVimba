@@ -18,21 +18,21 @@ void ofApp::setup(){
 	int bpsPerCamera = availableBandwidth / ids.size();
 	//bpsPerCamera *= 0.75;
 
-	for (int i = 0; i < ids.size(); i++) {
+	for (int i = 0; i < cameras.size(); i++) {
 		cameras[i].open(ids[i]);
-		cameras[i].setFeatureValue<VmbInt64_t>("StreamBytesPerSecond", bpsPerCamera);
+		cameras[i].start();
+		//cameras[i].setFeatureValue<VmbInt64_t>("StreamBytesPerSecond", bpsPerCamera);
 		VmbInt64_t bps = cameras[i].getFeatureValue<VmbInt64_t>("StreamBytesPerSecond");
 		VmbInt64_t ip = cameras[i].getFeatureValue<VmbInt64_t>("GevCurrentIPAddress");
 		//cameras[i].listFeatures();
-		ofLogNotice(__FUNCTION__) << "opening " << ids[i] << " " << bps << " bytes per second " << Utils::IPv4ToString(ip);
-		cameras[i].start();
+		ofLogNotice(__FUNCTION__) << "opening " << ids[i] << " (" << Utils::IPv4ToString(ip) << ") " << bps << " bytes per second ";
 	}
 }
 
 
 //--------------------------------------------------------------
 void ofApp::exit() {
-	for (ofxVimba::ofxVimbaCam cam : cameras) {
+	for (ofxVimba::ofxVimbaCam& cam : cameras) {
 		cam.close();
 	}
 	ofxVimba::exit();
@@ -40,18 +40,26 @@ void ofApp::exit() {
 
 //--------------------------------------------------------------
 void ofApp::update(){
-	for (ofxVimba::ofxVimbaCam cam : cameras) {
+	for (ofxVimba::ofxVimbaCam& cam : cameras) {
 		cam.update();
 	}
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-	float x = 10;
-	for (ofxVimba::ofxVimbaCam cam : cameras) {
+	ofSetColor(ofColor::white);
+	ofPushMatrix();
+	ofScale(0.25f, 0.25f);
+	float x = 0;
+	for (const ofxVimba::ofxVimbaCam& cam : cameras) {
 		cam.draw(x, 10);
+
+		stringstream info;
+		info << cam.getNumFramesReceived() << " frames";
+		ofDrawBitmapString(info.str(), x, cam.getCamHeight() + 14);
 		x += cam.getCamWidth() + 10;
 	}
+	ofPopMatrix();
 }
 
 //--------------------------------------------------------------
