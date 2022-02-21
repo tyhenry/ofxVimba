@@ -65,8 +65,8 @@ public:
 	int getCamHeight()	{ return m_attributes.height; }
 	string getCamPixelFormatAsString() 	{ return PixelFormatToString(m_attributes.pixelFormat); }
 
-	void draw(float x, float y, float w, float h)	{ m_frame.draw(x,y,w,h); }
-	void draw(float x, float y)						{ m_frame.draw(x,y); }
+	void draw(float x, float y, float w, float h)	{ if (m_frame.isAllocated()) m_frame.draw(x,y,w,h); }
+	void draw(float x, float y)						{ if(m_frame.isAllocated()) m_frame.draw(x,y);  }
 
 	ofImage& getFrame()		{ return m_frame; }
 	

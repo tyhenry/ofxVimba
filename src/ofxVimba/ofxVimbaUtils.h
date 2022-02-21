@@ -147,4 +147,14 @@ inline bool CheckError(VmbErrorType err, bool logErr = true, string msg = "")
 	return true;
 }
 
+inline string IPv4ToString(const VmbInt64_t nIPAddress)
+{
+    stringstream sIPv4;
+    sIPv4 << ofToString(0xFF & (nIPAddress >> 24)) << "."
+        << ofToString(0xFF & (nIPAddress >> 16)) << "."
+        << ofToString(0xFF & (nIPAddress >> 8)) << "."
+        << ofToString(0xFF & nIPAddress);
+    return sIPv4.str();
+}
+
 }} // namespace ofxVimba::Utils

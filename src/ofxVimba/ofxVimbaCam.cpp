@@ -208,7 +208,7 @@ bool ofxVimbaCam::update()
 
 					if(good)
 					{
-						//cout
+						//ofLogNotice(__FUNCTION__)
 						//	<< "w x h, size in bytes - pxl fmt: "
 						//	<< width << " x " << height << ", " << nSize << " - "
 						//	<< PixelFormatToString(pixelFmt)
@@ -227,6 +227,12 @@ bool ofxVimbaCam::update()
 			m_pFrameObserver->QueueFrame(pFrame);
 
 		}
+		else {
+			//ofLogNotice(__FUNCTION__) << "m_pFrameObserver returned nullptr.  weird";
+		}
+	}
+	else {
+		//ofLogNotice(__FUNCTION__) << "no new frame";
 	}
 	return m_bNewFrame;
 }
