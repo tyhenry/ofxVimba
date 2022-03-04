@@ -9,13 +9,37 @@
 using namespace AVT;
 using namespace ofxVimba::Core;
 
-typedef chrono::high_resolution_clock Clock;
-typedef chrono::time_point<Clock> TimePoint;
-typedef chrono::duration<float, milli> Duration;
+//typedef chrono::high_resolution_clock Clock;
+//typedef chrono::time_point<Clock> TimePoint;
+//typedef chrono::duration<float, milli> Duration;
 
 namespace ofxVimba {
 
-class ofxVimbaCam {
+typedef enum VmbGainAutoMode {
+	Off = 1,
+	Once = 2,
+	Continuous = 3
+};
+
+typedef enum VmbSensorShutterMode {
+	Global = 1,
+	Rolling = 2,
+	GlobalReset = 3
+};
+
+typedef enum GevIPConfigurationMode {
+	LLA = 1,
+	DHCP = 2,
+	Persistent = 3
+};
+
+typedef enum BandwidthControlMode {
+	StreamBytesPerSecond = 1,
+	SCPD = 2,
+	Both = 3
+};
+
+class ofxVimbaCam { //TODO : public ofBaseVideoGrabber, public ofBaseVideoDraws {
 
 public:
 
@@ -25,6 +49,21 @@ public:
 		unsigned int height = 0;
 		VmbPixelFormat_t pixelFormat = 0;
 		float maxFrameRate = 0;
+	};
+
+	struct ofxVimbaCamStatus {
+		VmbInt64_t bps;
+		double limit;
+		double exposure;
+		double tempC;
+		double tempF;
+		double gain;
+		double fps;
+		VmbInt64_t payloadSize;
+		VmbInt64_t width;
+		VmbInt64_t height;
+		VmbInt64_t imageSize;
+		VmbInt64_t pixelFmt;
 	};
 
 	ofxVimbaCam() 
@@ -38,12 +77,16 @@ public:
 
 	}
 
-	vector<string> listDevices(bool log =true);
+	/// \brief Get a list of available video grabber devices.
+	/// \returns a std::vector of ofVideoDevice objects.
+	vector<ofVideoDevice> listDevices();
 
 	/// \brief	Open a connection to a camera
 	/// \param[in]	deviceID	(Optional) Specify device ID as string, as provided by listDevices()
 	///							If left blank, will try to open first available device
-	bool open(string deviceID="");
+	bool open(int id=0);
+
+	bool set(ofJson& settings);
 
 	/// \brief	StartContinuousImageAcquisition
 	bool start();
@@ -54,12 +97,11 @@ public:
 	/// \brief	Closes the camera connection, freeing up resources
 	void close();
 
-	//bool save();
+	//bool save(string filename="");
 
-	//bool load();
+	//bool load(string filename="");
 
 	/// \brief	Grabs new frame(s) from the async queue (FrameObserver), if any ready
-	/// \return	True if new frame(s)
 	bool update();
 	
 	/// \return True if new frame(s)
@@ -67,6 +109,21 @@ public:
 
 	int getCamWidth() const	{ return m_attributes.width; }
 	int getCamHeight() const	{ return m_attributes.height; }
+	string ofxVimbaCam::getID() const { return m_attributes.deviceID; }
+	ofxVimbaCamStatus getStatus() {
+		ofxVimbaCamStatus status;
+		status.bps = getFeatureValue<VmbInt64_t>("StreamBytesPerSecond");
+		status.limit =  getFeatureValue<double>("AcquisitionFrameRateLimit");
+		status.exposure =  getFeatureValue<double>("ExposureTimeAbs");
+		status.tempC =  getFeatureValue<double>("DeviceTemperature");
+		status.tempF = (status.tempC * 1.8) + 32;
+		status.payloadSize =  getFeatureValue<VmbInt64_t>("PayloadSize");
+		status.imageSize =  getFeatureValue<VmbInt64_t>("ImageSize");
+		status.pixelFmt =  getFeatureValue<VmbInt64_t>("PixelFormat");
+		status.gain =  getFeatureValue<double>("Gain");
+		status.fps =  getFeatureValue<double>("StatFrameRate");
+		return status;
+	}
 	string getCamPixelFormatAsString() 	{ return PixelFormatToString(m_attributes.pixelFormat); }
 
 	void draw(float x, float y, float w, float h) const		{ if (m_frame.isAllocated()) m_frame.draw(x,y,w,h); }
@@ -76,37 +133,9 @@ public:
 
 	ofImage& getFrame()		{ return m_frame; }
 	ofTexture& getTexture() { return m_frame.getTexture(); }
-	string getID() const;
 
 	void listFeatures();
-
-	bool runCommand(string featureName) {
-		if (SP_ISNULL(m_pCamera))
-		{
-			ofLogWarning(__FUNCTION__) << "Camera has not been initialized";
-			return false;
-		}
-
-		VmbAPI::FeaturePtr pFeature;
-		VmbErrorType result;
-		result = SP_ACCESS(m_pCamera)->GetFeatureByName(featureName.c_str(), pFeature);
-		if (VmbErrorSuccess == result) {
-			result = SP_ACCESS(pFeature)->RunCommand();
-			if (VmbErrorSuccess != result)
-			{
-				ofLogWarning(__FUNCTION__) << featureName << ": " << ErrorToString(result);
-				return false;
-			}
-			return true;
-		}
-		else 
-		{
-			ofLogWarning(__FUNCTION__) << featureName << ": " << ErrorToString(result);
-			return false;
-		}
-		return false;
-	}
-
+	bool runCommand(string featureName);
 
 	template <typename T>
 	bool setFeatureValue(const std::string& featureName, T value) {
@@ -155,17 +184,18 @@ public:
 		return -1;
 	}
 
-	TimePoint lastFrame;
-	vector<float> times;
+	//TimePoint lastFrame;
+	//vector<float> times;
 
-	float getFPS() const {
-		if (times.size() == 0) return 0;
-		float avg = accumulate(times.begin(), times.end(), 0.0) / times.size();
-		if (avg == 0) return 0;
-		return 1000 / avg;
-	}
+	//float getFPS() const {
+	//	if (times.size() == 0) return 0;
+	//	float avg = accumulate(times.begin(), times.end(), 0.0) / times.size();
+	//	if (avg == 0) return 0;
+	//	return 1000 / avg;
+	//}
 
 protected:
+	bool updateAttributes();
 
 	ofImage m_frame;
 	bool m_bNewFrame; // new frame flagged during update()

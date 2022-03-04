@@ -2,78 +2,68 @@
 #include "ofxVimbaCam.h"
 
 using namespace ofxVimba;
+using namespace VmbAPI;
 
-vector<string> ofxVimbaCam::listDevices(bool log)
+vector<ofVideoDevice> ofxVimbaCam::listDevices()
 {
-	return m_System.listDevices(log);
+	return m_System.listDevices(true);
 }
 
-bool ofxVimbaCam::open(string deviceID)
+bool ofxVimbaCam::open(int id)
 {
+	auto devices = m_System.listDevices(false);
 
-	using namespace VmbAPI;
-	if (deviceID == "") {
-		auto devices = listDevices(false);
-		if (devices.size()) deviceID = devices[0];
-		else {
-			ofLogError("ofxVimbaCam") << "Couldn't open camera, no devices detected";
-			return false;
-		}
+	if (devices.size() == 0) {
+		ofLogError("ofxVimbaCam") << "Couldn't open camera, no devices detected";
+		return false;
+	}
+	if (id >= devices.size()) {
+		ofLogError("ofxVimbaCam") << "Device " << id << " doesn't exist.";
+		return false;
 	}
 
-	if (m_System.openDevice(deviceID, m_pCamera))
+	string deviceName = devices[id].deviceName;
+	if (m_System.openDevice(deviceName, m_pCamera))
 	{
-		m_attributes.deviceID = deviceID; // store ID
-
-		// setup some stuff before we register the frame observer
+		m_attributes.deviceID = deviceName; // store ID
 
 		// Set the GeV packet size to the highest possible value
 		// (In this example we do not test whether this cam actually is a GigE cam)
-		FeaturePtr pCommandFeature;
-		if (CHECK_ERR_Q(m_pCamera->GetFeatureByName("GVSPAdjustPacketSize", pCommandFeature)))
-		{
-			if (CHECK_ERR_Q(pCommandFeature->RunCommand()))
-			{
-				bool bIsCommandDone = false;
-				while (!bIsCommandDone) {
-					if (pCommandFeature->IsCommandDone(bIsCommandDone) != VmbErrorSuccess) break;
-				}
-			}
-		}
-
-		// save the image width, height, and set/get pixel format
-		VmbInt64_t width, height, pixelFmt;
-		bool success = false; 
-
-		// get width
-		if (success = CHECK_ERR_Q(GetFeatureIntValue(m_pCamera, "Width", width)))
-		{
-			m_attributes.width = (unsigned int)width;
-
-			// get height
-			if (success = CHECK_ERR_Q(GetFeatureIntValue(m_pCamera, "Height", height)))
-			{
-				m_attributes.height = (unsigned int)height;
-
-				// set pixel format to RGB24
-				if (success = !CHECK_ERR_Q(SetFeatureIntValue(m_pCamera, "PixelFormat", VmbPixelFormatRgb8)))
-				{
-					// try YUV422
-					SetFeatureIntValue(m_pCamera, "PixelFormat", VmbPixelFormatYuv422);
-				}
-				// get current pixel format
-				if (success = CHECK_ERR_Q(GetFeatureIntValue(m_pCamera, "PixelFormat", pixelFmt)))
-				{
-					m_attributes.pixelFormat = (VmbPixelFormat_t)pixelFmt;
-					return true;
-				}
-			}
-		}
+		runCommand("GVSPAdjustPacketSize");
+		return updateAttributes();
 	}
+
 	// failed
 	close();
 	m_attributes = ofxVimbaCamAttributes(); // reset
 	return false;
+}
+
+// -------------------------------------------------
+bool ofxVimbaCam::updateAttributes()
+{
+	m_attributes.width = getFeatureValue<VmbInt64_t>("Width");
+	m_attributes.height = getFeatureValue<VmbInt64_t>("Height");
+	m_attributes.pixelFormat = (VmbPixelFormat_t)getFeatureValue<VmbInt64_t>("PixelFormat");
+}
+
+bool ofxVimbaCam::set(ofJson& settings) {
+	bool success = false;
+	for (auto& el : settings.items()) {
+		string name = el.key();
+		ofJson value = el.value();
+		
+		if (value.is_boolean()) {
+			success |= setFeatureValue(name, value.get<bool>());
+		}
+		if (value.is_number_integer()) {
+			success |= setFeatureValue(name, value.get<VmbInt64_t>());
+		}
+		if (value.is_string()) {
+			success |= setFeatureValue(name, value.get<string>().c_str());
+		}
+	}
+	return success && updateAttributes();
 }
 
 
@@ -85,7 +75,7 @@ bool ofxVimbaCam::start()
 		return false;
 	}
 
-	lastFrame = Clock::now();
+	//lastFrame = Clock::now();
 
 	// Create a frame observer for the camera
 	m_pFrameObserver = new FrameObserver(m_pCamera);
@@ -99,9 +89,28 @@ bool ofxVimbaCam::start()
 	return false;
 }
 
-//bool ofxVimbaCam::save()
+bool ofxVimbaCam::stop()
+{
+	if (m_pCamera != nullptr)
+	{
+		auto error = m_pCamera->StopContinuousImageAcquisition();
+		if (error == VmbErrorSuccess)
+		{
+			m_pFrameObserver = nullptr;
+			return true;
+		}
+		ofLogError(__FUNCTION__) << ErrorToString(error);
+	}
+	return false;
+}
+
+
+//bool ofxVimbaCam::save(string filename)
 //{
-//	string path = ofToDataPath(m_attributes.deviceID + "_settings.xml", true);
+//	if (filename.length() == 0) {
+//		filename = m_attributes.deviceID + "_settings.xml";
+//	}
+//	string path = ofToDataPath(filename, true);
 //	auto err = m_pCamera->SaveCameraSettings(path);
 //	if (err == VmbErrorSuccess) {
 //		ofLogNotice(__FUNCTION__) << "Saved settings to " << path;
@@ -113,34 +122,24 @@ bool ofxVimbaCam::start()
 //}
 //
 //
-//bool ofxVimbaCam::load()
+//bool ofxVimbaCam::load(string filename)
 //{
-//	string path = ofToDataPath(m_attributes.deviceID + "_settings.xml", true);
+//	if (filename.length() == 0) {
+//		filename = m_attributes.deviceID + "_settings.xml";
+//	}
+//	string path = ofToDataPath(filename, true);
+//	ofLogNotice(__FUNCTION__) << "Loading " << path;
 //	auto err = m_pCamera->LoadCameraSettings(path);
 //	if (err == VmbErrorSuccess) {
 //		ofLogNotice(__FUNCTION__) << "Loaded settings from " << path;
 //		return true;
 //	}
 //
-//	ofLogError(__FUNCTION__) << "Couldn't load settings " << ErrorToString(err);
+//	ofLogError(__FUNCTION__) << "Couldn't load settings from " << filename << " " << ErrorToString(err);
 //	return false;
 //}
 
 
-bool ofxVimbaCam::stop()
-{
-	if (m_pCamera != nullptr)
-	{
-		auto error = m_pCamera->StopContinuousImageAcquisition();
-		if (error == VmbErrorSuccess) 
-		{
-			m_pFrameObserver = nullptr;
-			return true;
-		}
-		ofLogError(__FUNCTION__) << ErrorToString(error);
-	}
-	return false;
-}
 
 void ofxVimbaCam::listFeatures()
 {
@@ -183,16 +182,46 @@ void ofxVimbaCam::close()
 	}
 }
 
-string ofxVimbaCam::getID() const {
 
-	std::string strCameraID = "";
-	VmbErrorType err = m_pCamera->GetID(strCameraID);
-	if (VmbErrorSuccess != err) {
-		ofLogWarning(__FUNCTION__) << ErrorToString(err);
+bool ofxVimbaCam::runCommand(string featureName) {
+	if (SP_ISNULL(m_pCamera))
+	{
+		ofLogWarning(__FUNCTION__) << "Camera has not been initialized";
+		return false;
 	}
-	return strCameraID;
 
+
+	//FeaturePtr pCommandFeature;
+	//if (CHECK_ERR_Q(m_pCamera->GetFeatureByName("GVSPAdjustPacketSize", pCommandFeature)))
+	//{
+	//	if (CHECK_ERR_Q(pCommandFeature->RunCommand()))
+	//	{
+	//		bool bIsCommandDone = false;
+	//		while (!bIsCommandDone) {
+	//			if (pCommandFeature->IsCommandDone(bIsCommandDone) != VmbErrorSuccess) break;
+	//		}
+	//	}
+	//}
+
+	FeaturePtr pCommandFeature;
+	VmbErrorType result = SP_ACCESS(m_pCamera)->GetFeatureByName(featureName.c_str(), pCommandFeature);
+	if (VmbErrorSuccess == result) {
+		result = SP_ACCESS(pCommandFeature)->RunCommand();
+		if (VmbErrorSuccess != result)
+		{
+			ofLogWarning(__FUNCTION__) << featureName << ": " << ErrorToString(result);
+			return false;
+		}
+		return true;
+	}
+	else
+	{
+		ofLogWarning(__FUNCTION__) << featureName << ": " << ErrorToString(result);
+		return false;
+	}
+	return false;
 }
+
 
 bool ofxVimbaCam::update()
 {
@@ -221,13 +250,13 @@ bool ofxVimbaCam::update()
 				{
 					VmbUint32_t nSize, width, height;
 					VmbPixelFormatType pixelFmt;
-					bool good = true;
-					good = good && CHECK_ERR_Q(pFrame->GetImageSize(nSize));
-					good = good && CHECK_ERR_Q(pFrame->GetWidth(width));
-					good = good && CHECK_ERR_Q(pFrame->GetHeight(height));
-					good = good && CHECK_ERR_Q(pFrame->GetPixelFormat(pixelFmt));
+		
 
-					if (good)
+					VmbErrorType err = pFrame->GetImageSize(nSize);
+					if(err == VmbErrorSuccess) err = pFrame->GetWidth(width);
+					if(err == VmbErrorSuccess) err = pFrame->GetHeight(height);
+					if(err == VmbErrorSuccess) err = pFrame->GetPixelFormat(pixelFmt);
+					if(err == VmbErrorSuccess)
 					{
 						//ofLogNotice(__FUNCTION__)
 						//	<< "w x h, size in bytes - pxl fmt: "
@@ -235,25 +264,27 @@ bool ofxVimbaCam::update()
 						//	<< PixelFormatToString(pixelFmt)
 						//	<< endl;
 
-						//ofLogNotice(__FUNCTION__) << PixelFormatToString(pixelFmt);
-
-						if (pixelFmt != VmbPixelFormatRgb8) {
-							ofLogNotice(__FUNCTION__) << "Transforming Data";
+						if (pixelFmt == VmbPixelFormatYuv444) {
 							std::vector<VmbUchar_t> TransformedData;
 							TransformImage(pFrame, TransformedData, "RGB24");
 							pBuffer = &TransformedData[0];
 						}
 			
-						m_frame.setFromPixels(pBuffer, width, height, OF_IMAGE_COLOR);
+						ofImageType type = OF_IMAGE_COLOR;
+						if (pixelFmt == VmbPixelFormatMono8) {
+							type = OF_IMAGE_GRAYSCALE;
+						}
+
+						m_frame.setFromPixels(pBuffer, width, height, type); 
 						m_NumFramesReceived++;
 
-						TimePoint now = Clock::now();
-						Duration diff = now - lastFrame;
-						if (diff.count() < 1000)
-							times.push_back(diff.count());
-						while (times.size() > 100)
-							times.erase(times.begin());
-						lastFrame = Clock::now();
+						//TimePoint now = Clock::now();
+						//Duration diff = now - lastFrame;
+						//if (diff.count() < 1000)
+						//	times.push_back(diff.count());
+						//while (times.size() > 100)
+						//	times.erase(times.begin());
+						//lastFrame = Clock::now();
 					}
 					else
 					{

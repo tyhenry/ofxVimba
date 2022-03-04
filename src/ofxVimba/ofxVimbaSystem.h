@@ -34,7 +34,7 @@ public:
 	void shutdown();
 
 	/// get list of devices as string IDs
-	vector<string> listDevices(bool log = true);
+	vector<ofVideoDevice> listDevices(bool log = true);
 
 	/// open camera
 	/// \param[in]		deviceID	device ID as string, from listDevices()

@@ -123,43 +123,43 @@ string PixelFormatToString(VmbPixelFormat_t fmt)
 	}
 }
 
-
-/** read an integer feature from camera.
-*/
-VmbErrorType  GetFeatureIntValue(const VmbAPI::CameraPtr& camera, const std::string& featureName, VmbInt64_t& value)
-{
-	if (SP_ISNULL(camera))
-	{
-		return VmbErrorBadParameter;
-	}
-	VmbAPI::FeaturePtr      pFeature;
-	VmbErrorType    result;
-	result = SP_ACCESS(camera)->GetFeatureByName(featureName.c_str(), pFeature);
-	if (VmbErrorSuccess == result)
-	{
-		result = SP_ACCESS(pFeature)->GetValue(value);
-	}
-	return result;
-}
-
-
-/** write an integer feature to camera.
-*/
-VmbErrorType SetFeatureIntValue(const VmbAPI::CameraPtr& camera, const std::string& featureName, VmbInt64_t value)
-{
-	if (SP_ISNULL(camera))
-	{
-		return VmbErrorBadParameter;
-	}
-	VmbAPI::FeaturePtr      pFeature;
-	VmbErrorType    result;
-	result = SP_ACCESS(camera)->GetFeatureByName(featureName.c_str(), pFeature);
-	if (VmbErrorSuccess == result)
-	{
-		result = SP_ACCESS(pFeature)->SetValue(value);
-	}
-	return result;
-}
+//
+///** read an integer feature from camera.
+//*/
+//VmbErrorType  GetFeatureIntValue(const VmbAPI::CameraPtr& camera, const std::string& featureName, VmbInt64_t& value)
+//{
+//	if (SP_ISNULL(camera))
+//	{
+//		return VmbErrorBadParameter;
+//	}
+//	VmbAPI::FeaturePtr      pFeature;
+//	VmbErrorType    result;
+//	result = SP_ACCESS(camera)->GetFeatureByName(featureName.c_str(), pFeature);
+//	if (VmbErrorSuccess == result)
+//	{
+//		result = SP_ACCESS(pFeature)->GetValue(value);
+//	}
+//	return result;
+//}
+//
+//
+///** write an integer feature to camera.
+//*/
+//VmbErrorType SetFeatureIntValue(const VmbAPI::CameraPtr& camera, const std::string& featureName, VmbInt64_t value)
+//{
+//	if (SP_ISNULL(camera))
+//	{
+//		return VmbErrorBadParameter;
+//	}
+//	VmbAPI::FeaturePtr      pFeature;
+//	VmbErrorType    result;
+//	result = SP_ACCESS(camera)->GetFeatureByName(featureName.c_str(), pFeature);
+//	if (VmbErrorSuccess == result)
+//	{
+//		result = SP_ACCESS(pFeature)->SetValue(value);
+//	}
+//	return result;
+//}
 
 
 VmbErrorType TransformImage(const VmbAPI::FramePtr& SourceFrame, std::vector<VmbUchar_t>& DestinationData, const std::string& DestinationFormat)
@@ -216,6 +216,37 @@ VmbErrorType TransformImage(const VmbAPI::FramePtr& SourceFrame, std::vector<Vmb
 	Result = static_cast<VmbErrorType>(VmbImageTransform(&SourceImage, &DestinationImage, NULL, 0));
 	return Result;
 }
+
+string IPv4ToString(const VmbInt64_t nIPAddress)
+{
+	stringstream sIPv4;
+	sIPv4 << ofToString(0xFF & (nIPAddress >> 24)) << "."
+		<< ofToString(0xFF & (nIPAddress >> 16)) << "."
+		<< ofToString(0xFF & (nIPAddress >> 8)) << "."
+		<< ofToString(0xFF & nIPAddress);
+	return sIPv4.str();
+}
+
+VmbInt64_t StringToIPv4(const string& sIPString)
+{
+	VmbInt64_t ipAddress = 0;
+	vector<string> ipParts = ofSplitString(sIPString, ".", true, true);
+
+	if (ipParts.size() == 4)
+	{
+		for (string& part : ipParts) {
+			VmbInt64_t temp = stoi(part);
+			if (!ofInRange(temp, 0, 255)) {
+				ofLogWarning(__FUNCTION__) << "Illegal stuff in IP address";
+				return -1;
+			}
+			ipAddress = (ipAddress << 8) + temp;
+		}
+		return ipAddress;
+	}
+	return -1;
+}
+
 
 
 }} // namespace ofxVimba::Utils

@@ -2,6 +2,8 @@
 
 using namespace ofxVimba;
 
+
+
 //--------------------------------------------------------------
 void ofApp::setup(){
 
@@ -9,23 +11,51 @@ void ofApp::setup(){
 	ofxVimba::Core::ofxVimbaSystem& system = ofxVimbaSystem::getInstance();
 	system.startup();
 
-	vector<string> ids = system.listDevices(true);
-	cameras.resize(ids.size());
+	vector<ofVideoDevice> devices = system.listDevices();
+	cameras.resize(devices.size());
 
 
 	// assumes a fully dedicated gigabit switch and NIC (no overhead)
 	int availableBandwidth = 124000000;
-	int bpsPerCamera = availableBandwidth / ids.size();
+	int bpsPerCamera = availableBandwidth / devices.size();
 	//bpsPerCamera *= 0.75;
+	ofJson settings = {
+		{"StreamBytesPerSecond", bpsPerCamera },
+		{"PixelFormat", VmbPixelFormatMono8},
+		{"BinningHorizontal", 2 },
+		{"BinningVertical", 1 },
+		{"DecimationHorizontal", 1},
+		{"DecimationVertical", 2},
+		{"Height", 768},
+		{"Width", 1024},
+		{"OffsetX", 4},
+		{"OffsetY", 4},
+		{"ChunkModeActive", false},
+		{"GainAuto", Off},
+		//{"GevIPConfigurationMode", Persistent },
+		{"BandwidthControlMode", StreamBytesPerSecond },
+		{"StreamFrameRateConstrain", false}
+	};
+
 
 	for (int i = 0; i < cameras.size(); i++) {
-		cameras[i].open(ids[i]);
+		ofxVimbaCam& cam = cameras[i];
+		char userID[10];
+		sprintf(userID, "Cam%03d", i);
+		//char ipAddress[24];
+		//sprintf(ipAddress, "169.254.123.%i", 45+i);
+
+		settings["DeviceUserID"] = userID;
+		//settings["GevPersistentIPAddress"] = StringToIPv4(ipAddress);
+
+		cam.open(i);
+		cam.set(settings);
 		cameras[i].start();
-		//cameras[i].setFeatureValue<VmbInt64_t>("StreamBytesPerSecond", bpsPerCamera);
+ 
 		VmbInt64_t bps = cameras[i].getFeatureValue<VmbInt64_t>("StreamBytesPerSecond");
 		VmbInt64_t ip = cameras[i].getFeatureValue<VmbInt64_t>("GevCurrentIPAddress");
 		//cameras[i].listFeatures();
-		ofLogNotice(__FUNCTION__) << "opening " << ids[i] << " (" << Utils::IPv4ToString(ip) << ") " << bps << " bytes per second ";
+		ofLogNotice(__FUNCTION__) << "opening " << devices[i].deviceName << " (" << Utils::IPv4ToString(ip) << ") " << bps << " bytes per second ";
 	}
 }
 
@@ -49,13 +79,13 @@ void ofApp::update(){
 void ofApp::draw(){
 	ofSetColor(ofColor::white);
 	ofPushMatrix();
-	ofScale(0.25f, 0.25f);
+	//ofScale(0.25f, 0.25f);
 	float x = 0;
 	for (const ofxVimba::ofxVimbaCam& cam : cameras) {
 		cam.draw(x, 10);
 
 		stringstream info;
-		info << cam.getNumFramesReceived() << " frames | " << setprecision(3) << cam.getFPS() << "fps";
+		info << cam.getNumFramesReceived() << " frames";
 		ofDrawBitmapString(info.str(), x, cam.getCamHeight() + 14);
 
 		x += cam.getCamWidth();
