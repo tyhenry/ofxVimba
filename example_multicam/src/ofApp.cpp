@@ -31,11 +31,12 @@ void ofApp::setup(){
 		{"OffsetX", 4},
 		{"OffsetY", 4},
 		{"ChunkModeActive", false},
-		{"GainAuto", Off},
+		{"GainAuto", VmbGainAutoMode::Off},
 		//{"GevIPConfigurationMode", Persistent },
-		{"BandwidthControlMode", StreamBytesPerSecond },
+		{"BandwidthControlMode", BandwidthControlMode::StreamBytesPerSecond },
 		{"StreamFrameRateConstrain", false}
 	};
+
 
 
 	for (int i = 0; i < cameras.size(); i++) {
@@ -50,7 +51,7 @@ void ofApp::setup(){
 
 		cam.open(i);
 		cam.set(settings);
-		cameras[i].start();
+		cam.start();
  
 		VmbInt64_t bps = cameras[i].getFeatureValue<VmbInt64_t>("StreamBytesPerSecond");
 		VmbInt64_t ip = cameras[i].getFeatureValue<VmbInt64_t>("GevCurrentIPAddress");

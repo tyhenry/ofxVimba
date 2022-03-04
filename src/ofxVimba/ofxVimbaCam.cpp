@@ -9,20 +9,8 @@ vector<ofVideoDevice> ofxVimbaCam::listDevices()
 	return m_System.listDevices(true);
 }
 
-bool ofxVimbaCam::open(int id)
-{
-	auto devices = m_System.listDevices(false);
+bool ofxVimbaCam::open(string deviceName) {
 
-	if (devices.size() == 0) {
-		ofLogError("ofxVimbaCam") << "Couldn't open camera, no devices detected";
-		return false;
-	}
-	if (id >= devices.size()) {
-		ofLogError("ofxVimbaCam") << "Device " << id << " doesn't exist.";
-		return false;
-	}
-
-	string deviceName = devices[id].deviceName;
 	if (m_System.openDevice(deviceName, m_pCamera))
 	{
 		m_attributes.deviceID = deviceName; // store ID
@@ -39,12 +27,29 @@ bool ofxVimbaCam::open(int id)
 	return false;
 }
 
+bool ofxVimbaCam::open(int n)
+{
+	auto devices = m_System.listDevices(false);
+
+	if (devices.size() == 0) {
+		ofLogError("ofxVimbaCam") << "Couldn't open camera, no devices detected";
+		return false;
+	}
+	if (n >= devices.size()) {
+		ofLogError("ofxVimbaCam") << "Device " << n << " doesn't exist.";
+		return false;
+	}
+
+	return open(devices[n].deviceName);
+}
+
 // -------------------------------------------------
 bool ofxVimbaCam::updateAttributes()
 {
 	m_attributes.width = getFeatureValue<VmbInt64_t>("Width");
 	m_attributes.height = getFeatureValue<VmbInt64_t>("Height");
 	m_attributes.pixelFormat = (VmbPixelFormat_t)getFeatureValue<VmbInt64_t>("PixelFormat");
+	return true;
 }
 
 bool ofxVimbaCam::set(ofJson& settings) {
@@ -53,14 +58,24 @@ bool ofxVimbaCam::set(ofJson& settings) {
 		string name = el.key();
 		ofJson value = el.value();
 		
-		if (value.is_boolean()) {
-			success |= setFeatureValue(name, value.get<bool>());
-		}
-		if (value.is_number_integer()) {
-			success |= setFeatureValue(name, value.get<VmbInt64_t>());
-		}
-		if (value.is_string()) {
-			success |= setFeatureValue(name, value.get<string>().c_str());
+		switch (value.type()) {
+			case nlohmann::json::value_t::null:   break;		  ///< null value
+			case nlohmann::json::value_t::object: break;         ///< object (unordered set of name/value pairs)
+			case nlohmann::json::value_t::array:  break;         ///< array (ordered collection of values)
+			case nlohmann::json::value_t::string:				 ///< string value
+				success |= setFeatureValue(name, value.get<string>().c_str());
+				break;            
+			case nlohmann::json::value_t::boolean:				 ///< boolean value
+				success |= setFeatureValue(name, value.get<bool>());
+				break;           
+			case nlohmann::json::value_t::number_integer:      ///< number value (signed integer)
+			case nlohmann::json::value_t::number_unsigned:     ///< number value (unsigned integer)
+				success |= setFeatureValue(name, value.get<VmbInt64_t>());
+				break;  
+			case nlohmann::json::value_t::number_float:			 ///< number value (floating-point)
+				success |= setFeatureValue(name, value.get<double>());
+				break;    
+			case nlohmann::json::value_t::discarded:       break;       ///< discarded by the the parser callback function
 		}
 	}
 	return success && updateAttributes();
@@ -74,9 +89,7 @@ bool ofxVimbaCam::start()
 		ofLogError(__FUNCTION__) << "camera no yet constructed.";
 		return false;
 	}
-
-	//lastFrame = Clock::now();
-
+	
 	// Create a frame observer for the camera
 	m_pFrameObserver = new FrameObserver(m_pCamera);
 	auto error = m_pCamera->StartContinuousImageAcquisition(3, IFrameObserverPtr(m_pFrameObserver));
@@ -189,7 +202,6 @@ bool ofxVimbaCam::runCommand(string featureName) {
 		ofLogWarning(__FUNCTION__) << "Camera has not been initialized";
 		return false;
 	}
-
 
 	//FeaturePtr pCommandFeature;
 	//if (CHECK_ERR_Q(m_pCamera->GetFeatureByName("GVSPAdjustPacketSize", pCommandFeature)))
@@ -312,6 +324,12 @@ bool ofxVimbaCam::update()
 	return m_bNewFrame;
 }
 
+// ------------------------------------------------------------------------
+const ofPixels& ofxVimbaCam::getPixels() const { 
+	return m_frame.getPixels();
 
-
-
+}
+// ------------------------------------------------------------------------
+ofPixels& ofxVimbaCam::getPixels() { 
+	return m_frame.getPixels();
+}

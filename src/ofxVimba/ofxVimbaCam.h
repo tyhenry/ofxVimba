@@ -9,37 +9,34 @@
 using namespace AVT;
 using namespace ofxVimba::Core;
 
-//typedef chrono::high_resolution_clock Clock;
-//typedef chrono::time_point<Clock> TimePoint;
-//typedef chrono::duration<float, milli> Duration;
 
 namespace ofxVimba {
 
-typedef enum VmbGainAutoMode {
+enum class VmbGainAutoMode {
 	Off = 1,
 	Once = 2,
 	Continuous = 3
 };
 
-typedef enum VmbSensorShutterMode {
+enum class VmbSensorShutterMode {
 	Global = 1,
 	Rolling = 2,
 	GlobalReset = 3
 };
 
-typedef enum GevIPConfigurationMode {
+enum class GevIPConfigurationMode {
 	LLA = 1,
 	DHCP = 2,
 	Persistent = 3
 };
 
-typedef enum BandwidthControlMode {
+enum class BandwidthControlMode {
 	StreamBytesPerSecond = 1,
 	SCPD = 2,
 	Both = 3
 };
 
-class ofxVimbaCam { //TODO : public ofBaseVideoGrabber, public ofBaseVideoDraws {
+class ofxVimbaCam :	public ofBaseHasPixels { //TODO : public ofBaseVideoGrabber, public ofBaseVideoDraws {
 
 public:
 
@@ -84,7 +81,9 @@ public:
 	/// \brief	Open a connection to a camera
 	/// \param[in]	deviceID	(Optional) Specify device ID as string, as provided by listDevices()
 	///							If left blank, will try to open first available device
-	bool open(int id=0);
+	bool open(string deviceName);
+	bool open(int n=0);
+	
 
 	bool set(ofJson& settings);
 
@@ -105,7 +104,7 @@ public:
 	bool update();
 	
 	/// \return True if new frame(s)
-	bool isFrameNew()	{ return m_bNewFrame; }
+	bool isFrameNew() const	{ return m_bNewFrame; }
 
 	int getCamWidth() const	{ return m_attributes.width; }
 	int getCamHeight() const	{ return m_attributes.height; }
@@ -184,15 +183,8 @@ public:
 		return -1;
 	}
 
-	//TimePoint lastFrame;
-	//vector<float> times;
-
-	//float getFPS() const {
-	//	if (times.size() == 0) return 0;
-	//	float avg = accumulate(times.begin(), times.end(), 0.0) / times.size();
-	//	if (avg == 0) return 0;
-	//	return 1000 / avg;
-	//}
+	const ofPixels& getPixels() const;
+	ofPixels& getPixels();
 
 protected:
 	bool updateAttributes();
@@ -203,7 +195,6 @@ protected:
 	ofxVimbaCamAttributes m_attributes;
 
 	unsigned long m_NumFramesReceived = 0;
-
 
 	/// \class	Asynchronous listener for new frames from device
 	///	\brief	keeps new frames in queue for ofxVimbaCam to grab
