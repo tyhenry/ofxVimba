@@ -4,7 +4,8 @@ bool ofxVimba::Core::ofxVimbaSystem::startup()
 {
 	if (!m_bSysStart) 
 	{ 
-		m_bSysStart = CHECK_ERR(m_vmbSystem.Startup());
+		VmbErrorType status = m_vmbSystem.Startup();
+		m_bSysStart = (status == VmbErrorSuccess);
 	}
 	return m_bSysStart;
 }
@@ -16,31 +17,46 @@ void ofxVimba::Core::ofxVimbaSystem::shutdown()
 	m_bSysStart = false;
 }
 
-vector<string> ofxVimba::Core::ofxVimbaSystem::listDevices(bool log)
+vector<ofVideoDevice> ofxVimba::Core::ofxVimbaSystem::listDevices(bool log)
 {
-	vector<string> devices;
+	vector<ofVideoDevice> devices;
 	VmbAPI::CameraPtrVector cams;
+	VmbErrorType status = m_vmbSystem.GetCameras(cams);
+
 	// get device list from Vimba API
-	if (CHECK_ERR_MSG(m_vmbSystem.GetCameras(cams), "Unable to access Vimba device list!"))
+	if (status == VmbErrorSuccess)
 	{
-		if (log) ofLogNotice("ofxVimba") << "Available Cameras:\n------------";
-		for (auto& cam : cams) {
-			// grab the device ID as string
-			string id;
-			if (cam && CHECK_ERR(cam->GetID(id)))
+		if (log) ofLogNotice(__FUNCTION__) << "Available Cameras:\n------------";
+		for (int i = 0; i < cams.size(); i++) {
+			ofVideoDevice device;
+			device.id = i;
+			if (cams[i])
 			{
-				if (log) cout << "ID: " << id << endl;
-				devices.push_back(id);
+				cams[i]->GetID(device.deviceName);
+				cams[i]->GetSerialNumber( device.serialID );
+				cams[i]->GetModel(device.hardwareName);
+				devices.push_back(device);
+				if (log) ofLogNotice(__FUNCTION__) << "deviceName: " << device.deviceName
+					<< " serialID: " << device.serialID
+					<< " hardwareName: " << device.hardwareName;
 			}
 		}
-		if (log) cout << "------------" << endl;
+		if (log) ofLogNotice(__FUNCTION__) << "------------";
+	}
+	else {
+		ofLogError(__FUNCTION__) << "Unable to access Vimba device list!";
 	}
 	return devices;
 }
 
 bool ofxVimba::Core::ofxVimbaSystem::openDevice(string deviceID, VmbAPI::CameraPtr& pCamera)
 {
-	return CHECK_ERR_MSG(m_vmbSystem.OpenCameraByID(deviceID.c_str(), VmbAccessModeFull, pCamera), "Unable to open device [" + deviceID +"]");
+	VmbErrorType status = m_vmbSystem.OpenCameraByID(deviceID.c_str(), VmbAccessModeFull, pCamera);
+	if (status == VmbErrorSuccess) {
+		return true;
+	}
+	ofLogError(__FUNCTION__) << "Unable to open device [" << deviceID << "]";
+	return false;
 }
 
 
